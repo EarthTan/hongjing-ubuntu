@@ -42,9 +42,14 @@ def run_menu(screen: pygame.Surface) -> str:
         for ev in pygame.event.get():
             if ev.type == pygame.QUIT:
                 return "quit"
+            if ev.type == pygame.VIDEORESIZE:
+                screen = pygame.display.set_mode(ev.size, pygame.RESIZABLE)
+                menu.resize(screen.get_size())
+                continue
             action = menu.handle_event(ev)
             if action:
                 return action
+        menu.update()
         menu.draw(screen)
         pygame.display.flip()
         clock.tick(FPS)

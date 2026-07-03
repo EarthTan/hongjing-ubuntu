@@ -84,3 +84,9 @@
 - [MVP-8] World.new_default 默认 with_ai=True,测试可显式 with_ai=False —— 默认开启符合"开箱即玩"语义
 - [MVP-8] _send_wave 在没有战斗单位时仍 fire(wave_timer 重置) —— 避免空 wave 阶段也卡 120s;空 base 时不 dispatch 但 timer 归零
 - [MVP-8] AI 不动玩家资源(p0 credits 不变) —— AI tick 只读/写 me.players[id],不会 cross-contaminate
+- [MVP-10] 主菜单用纯 pygame 几何绘制(网格背景/按钮/标题),不引入素材 —— 与项目"程序化美术"约定一致
+- [MVP-10] PLAY/QUIT 作为模块级常量(PLAY="play",QUIT="quit"),菜单内部用 dict 存 rect —— 让测试可以稳定地按钮位置和 key
+- [MVP-10] handle_event 返回 str|None 而非枚举 —— 与已有"play/quit"字符串契约一致,主循环零修改
+- [MVP-10] mousemotion 单独记录 _mouse_pos 以驱动 hover —— 避免每帧主动查询 pygame.mouse.get_pos()(更易测,也减少对全局状态的依赖)
+- [MVP-10] main.py run_menu 在 VIDEORESIZE 时同时 set_mode + menu.resize —— 之前只重设 display 但没让菜单重锚,小窗口下按钮可能错位
+- [MVP-10] 不加"设置/关于"按钮 —— MVP 范围只要求"开始/退出",保持最小菜单

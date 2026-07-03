@@ -1,1 +1,9 @@
 ⚠ claude.ai connectors are disabled because ANTHROPIC_API_KEY or another auth source is set and takes precedence over your claude.ai login · Unset it to load your organization's connectors
+**MVP-9 胜负判定 完成**
+
+- 新增 `engine/victory.py`:`GameResult` 枚举(ONGOING/VICTORY/DEFEAT) + `compute_game_result`/`check_victory`/`has_yard`/`draw_game_over`
+- `World.game_result` 字段,`World.tick` 末尾自动 `check_victory`
+- `main.py` 终局时跳过世界渲染、画 dim 蒙层 + VICTORY/DEFEAT 大字,ESC/鼠标点击返回菜单
+- 18 个 headless 测试覆盖单/多AI、玩家缺失、双杀、tick 传播、渲染
+- 全部 202 个测试通过,smoke test 300 帧无 crash
+- 提交 `1ebf5df`,push 到 master 成功
