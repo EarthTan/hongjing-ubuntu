@@ -12,8 +12,14 @@ from .buildings import (
     PlayerState,
     place_building,
     recompute_power,
+    tick_construction,
 )
 from .camera import Camera
+from .resources import (
+    Harvester,
+    tick_harvesters,
+    tick_refineries_spawn_harvesters,
+)
 from .settings import DEFAULT_WINDOW_H, DEFAULT_WINDOW_W, MAP_H, MAP_W
 from .tilemap import TileMap, generate_default_map
 
@@ -68,3 +74,23 @@ class World:
         for p in self.players:
             out.extend(p.buildings)
         return out
+
+    def all_harvesters(self) -> List[Harvester]:
+        out: List[Harvester] = []
+        for p in self.players:
+            if hasattr(p, "harvesters"):
+                out.extend(p.harvesters)
+        return out
+
+    def tick(self, dt: float = 1.0) -> None:
+        """Advance the full simulation by ``dt`` seconds.
+
+        Order:
+          1. Construction tick (per player, in player-id order).
+          2. Refinery auto-production of harvesters (per player).
+          3. Harvester state machine tick (per player).
+        """
+        for p in sorted(self.players, key=lambda x: x.id):
+            tick_construction(self.tilemap, self.players, p.id, dt=dt)
+        tick_refineries_spawn_harvesters(self.players, self.tilemap)
+        tick_harvesters(self.tilemap, self.players, dt)

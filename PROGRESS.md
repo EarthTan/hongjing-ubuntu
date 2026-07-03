@@ -1,7 +1,7 @@
 # PROGRESS
 - [x] 1. 地图与视窗 — 64×64 瓦片地图（草地/水/矿）、可缩放相机、边缘滚动、200×200 顶部小地图（视口高亮）、主菜单占位
 - [x] 2. 建造系统 — 5 种建筑(建造厂/电厂/矿场/兵营/战车工厂)，2×2 网格占地，FIFO 建造队列、电力产出/消耗、电力不足时生产暂停，建造成本即刻扣除，dependencies/prereq/上限校验
-- [ ] 3. 资源循环
+- [x] 3. 资源循环 — Harvester 状态机(IDLE→MOVING_TO_ORE→MINING→MOVING_TO_REFINERY→UNLOADING)；spiral 找最近矿点/矿场；矿场自动 spawn 矿车(1400 成本，每矿场上限 2)；卸货 700 ore=700 credits；World.tick(dt) 驱动全套循环
 - [ ] 4. 单位体系
 - [ ] 5. 操作控制
 - [ ] 6. A* 寻路

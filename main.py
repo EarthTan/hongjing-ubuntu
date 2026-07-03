@@ -67,6 +67,7 @@ def run_game() -> int:
         screen.fill((0, 0, 0))
         draw_tilemap(screen, world.tilemap, world.camera)
         draw_minimap(screen, world.tilemap, world.camera)
+        world.tick(dt=1.0 / FPS)
         pygame.display.flip()
         clock.tick(FPS)
     pygame.quit()

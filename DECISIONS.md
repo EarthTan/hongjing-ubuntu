@@ -16,3 +16,10 @@
 - [MVP-2] 战车工厂前置于矿场（prerequisite）—— 引入简单的产业链，后续 AI 可用同一规则
 - [MVP-2] 建造队列上限 5 —— 防 runaway 测试 / 防止玩家 enqueue 整个战局
 - [MVP-2] 电力不足时整个生产停顿（不区分 per-building） —— 经典红警简化；per-building 走 per-tile 网格是 future work
+- [MVP-3] 新文件 engine/resources.py 单独承载资源逻辑，与 buildings.py 解耦 —— 单文件职责清晰，后续 AI/寻路也可独立扩展
+- [MVP-3] Harvester 用 5 态状态机(IDLE→MOVING_TO_ORE→MINING→MOVING_TO_REFINERY→UNLOADING) —— 经典 RA 模型，每态可单测断言
+- [MVP-3] 矿车上限 = 每矿场 2 辆 —— MVP-3 简化让测试可断言；后续 UI 加产线后调高
+- [MVP-3] Refinery 自动出矿车(扣 1400 成本)而不是菜单生产 —— MVP-3 没建生产菜单，先让资源转起来；后续 MVP-4 兵种扩展时一并加队列
+- [MVP-3] HARVESTER_SPEED=4 tiles/s + 单轴 per-tick 步进 —— MVP-6 才换 A*，先确保步进方向正确、无穿墙
+- [MVP-3] 卸货比例 1:1(700 ore = 700 credits) —— 与经典 RA 偏离小，测试断言直观；refinery 加 buff 是 future work
+- [MVP-3] World.tick(dt) 单一入口驱动全套模拟 —— 避免上层(main/ui/AI)各自调子函数，省去顺序耦合
