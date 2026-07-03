@@ -8,3 +8,11 @@
 - [MVP-1] 逻辑层（tilemap/camera/world）零 pygame 依赖 —— 加快纯逻辑测试，无需 dummy SDL
 - [MVP-1] 渲染层隔离在 engine/render.py —— 是唯一强制依赖 pygame 的模块
 - [MVP-1] 主菜单放最小可工作版本（play/quit）占位 —— 留给 MVP-10 完善，避免阻塞主循环启动
+- [MVP-2] 全部建筑统一 2×2 占地 —— 简化 placement/overlap/AI 寻路测试，后续可对大建筑扩 footprint
+- [MVP-2] 电厂 net +80，其他建筑均 consume —— 单一电厂就能给整套初始经济供电，测试易断言 OK/LOW 切换
+- [MVP-2] 建造成本入队时一次扣光（不退款）—— 最简单模型，避开 partial-state cancel 带来的边角
+- [MVP-2] 建造厂初始建筑（5,5）开局由 World.new_default 直接 place，不进队列 —— 与「先有基地才能造东西」一致
+- [MVP-2] 建造厂入队后用 spiral-scan 自动找最近可建点 —— MVP-2 不引入 drone-deploy，AI 让用户能直接看到成果
+- [MVP-2] 战车工厂前置于矿场（prerequisite）—— 引入简单的产业链，后续 AI 可用同一规则
+- [MVP-2] 建造队列上限 5 —— 防 runaway 测试 / 防止玩家 enqueue 整个战局
+- [MVP-2] 电力不足时整个生产停顿（不区分 per-building） —— 经典红警简化；per-building 走 per-tile 网格是 future work
