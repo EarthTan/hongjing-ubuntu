@@ -21,6 +21,7 @@ from engine.settings import (
     MIN_ZOOM,
     MAX_ZOOM,
 )
+from engine.victory import GameResult, draw_game_over, is_terminal
 from engine.world import World
 from ui.hud import (
     ControllerState,
@@ -84,32 +85,45 @@ def run_game() -> int:
                 pygame.MOUSEMOTION,
                 pygame.KEYDOWN,
             ):
+                # MVP-9: if the game is over, the only valid input is "return to menu".
+                if is_terminal(world.game_result):
+                    if ev.type == pygame.KEYDOWN and ev.key == pygame.K_ESCAPE:
+                        running = False
+                    elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
+                        running = False
+                    continue
                 # MVP-5: selection, orders, control groups
                 handle_event(ev, world, ctrl)
         mx, my = pygame.mouse.get_pos()
-        world.camera.update_edge_scroll(mx, my, is_window_focused=(pygame.key.get_focused() or True))
+        if not is_terminal(world.game_result):
+            world.camera.update_edge_scroll(mx, my, is_window_focused=(pygame.key.get_focused() or True))
 
         screen.fill((0, 0, 0))
-        draw_tilemap(screen, world.tilemap, world.camera)
-        draw_selection_box(screen, world.camera, ctrl)
-        draw_selection_markers(screen, world, ctrl)
-        draw_unit_health_bars(
-            screen, world.camera, world.all_units(),
-            selected_ids={id(u) for u in ctrl.selection.units} if ctrl.selection.units else None,
-        )
-        draw_building_health_bars(
-            screen, world.camera, world.all_buildings(),
-            selected_ids={id(b) for b in ctrl.selection.buildings} if ctrl.selection.buildings else None,
-        )
-        draw_hit_flash_overlay(
-            screen, world.camera,
-            world.all_units(), world.all_buildings(),
-            world.flashes,
-        )
-        draw_particles(screen, world.camera, world.particles)
-        draw_minimap(screen, world.tilemap, world.camera)
-        draw_hud_text(screen, world, ctrl)
+        if not is_terminal(world.game_result):
+            draw_tilemap(screen, world.tilemap, world.camera)
+            draw_selection_box(screen, world.camera, ctrl)
+            draw_selection_markers(screen, world, ctrl)
+            draw_unit_health_bars(
+                screen, world.camera, world.all_units(),
+                selected_ids={id(u) for u in ctrl.selection.units} if ctrl.selection.units else None,
+            )
+            draw_building_health_bars(
+                screen, world.camera, world.all_buildings(),
+                selected_ids={id(b) for b in ctrl.selection.buildings} if ctrl.selection.buildings else None,
+            )
+            draw_hit_flash_overlay(
+                screen, world.camera,
+                world.all_units(), world.all_buildings(),
+                world.flashes,
+            )
+            draw_particles(screen, world.camera, world.particles)
+            draw_minimap(screen, world.tilemap, world.camera)
+            draw_hud_text(screen, world, ctrl)
         world.tick(dt=1.0 / FPS)
+        # MVP-9: paint the result overlay last, on top of the world (or on black
+        # once the player has left the game running long enough to wipe state).
+        if is_terminal(world.game_result):
+            draw_game_over(screen, world.game_result)
         pygame.display.flip()
         clock.tick(FPS)
     pygame.quit()

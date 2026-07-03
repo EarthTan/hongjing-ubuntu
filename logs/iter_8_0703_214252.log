@@ -1,1 +1,17 @@
 ⚠ claude.ai connectors are disabled because ANTHROPIC_API_KEY or another auth source is set and takes precedence over your claude.ai login · Unset it to load your organization's connectors
+MVP-8 done. Summary of this iteration:
+
+**Implemented:**
+- `engine/ai.py` — `EnemyAI` dataclass + `tick_all_ais` + `ai_tick` + `recruit_tick` + `_auto_expand_base` + `_send_wave`. AI queues buildings in priority (POWER → REFINERY → BARRACKS → WAR_FACTORY), recruits combat units (light_tank > infantry) gated on having a harvester, and dispatches attack-move waves at the player yard every 120s.
+- `engine/world.py` — `World.ais` list, `new_default(with_ai=True)` auto-spawns enemy yard + `EnemyAI`, `World.tick` invokes `tick_all_ais` after construction. Added `enemy_start_yard()` helper. Bumped `ENEMY_START_CREDITS` 5000→8000.
+- `engine/buildings.py` — POWER_PLANT carve-out: `tick_construction` no longer blocks on low-power when the head item is a power plant (lets AI/human escape the fresh-yard trap).
+- `tests/test_mvp8.py` — 24 new tests covering: world-with-AI defaults, yard placement, queue ordering, harvester gate, end-to-end base build (500 ticks), harvester spawn, infantry production, wave dispatch logic, multi-AI support.
+- `tests/test_mvp2.py` — Replaced `test_tick_low_power_pauses_construction` to use REFINERY (the actual pause case) and added `test_power_plant_carve_out_under_low_power` for the new carve-out.
+
+**Verification:**
+- 184/184 tests pass (full suite).
+- `tests/smoke_test.py` 300 frames in 4.96s, no crash.
+- 2000-tick sim: AI builds yard→power→refinery→barracks→war_factory, spawns 2 harvesters, accumulates 100+ combat units, fires 16 attack waves.
+- Committed (`07219f2`) and pushed to `master`.
+
+Next iteration's first unchecked item is **MVP-9: 胜负判定**.

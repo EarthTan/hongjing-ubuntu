@@ -38,6 +38,12 @@
 - [MVP-5] Building 加 hp 字段(默认 1000,BUILDING_STATS.hp 可调) —— MVP-7 才会画血条,但 MVP-5 的 ATTACK_BUILDING 已需要 hp 才能 kill
 - [MVP-5] ATTACK_MOVE 触发检测 enemy-in-range 自动切换 ATTACK_UNIT —— 与经典 RA 行为一致,只检测未发生接触的 tile (Chebyshev 距离 ≤ range)
 - [MVP-5] ATTACK_UNIT/ATTACK_BUILDING 射程内停下开火、不继续逼近 —— 与轴步进 movement 解耦,MVP-6 换 A* 时不会破坏战斗手感
+- [MVP-9] 新文件 engine/victory.py 单独承载胜负逻辑 —— 与 buildings 解耦,纯函数 compute_game_result 可无 pygame 测试
+- [MVP-9] 胜负触发条件 = 任意一方失去全部建造厂 —— 红警经典,只需盯一种关键建筑,逻辑最简
+- [MVP-9] 人类玩家 ID=0 缺失视为 DEFEAT —— 边角防御,避免 GameResult 悬空
+- [MVP-9] 双杀(双方建造厂同 tick 死)按优先级判 DEFEAT —— 人类先检查,人类优先于 AI
+- [MVP-9] game_result 挂在 World 上、tick 末尾自动 check_victory —— HUD/main/AI 都能读,无需各自扫建筑
+- [MVP-9] 终局时 main.py 跳过 camera/scroll/世界渲染、只画 dim 蒙层 + VICTORY/DEFEAT 大字 + ESC/点击提示 —— 输入也屏蔽,只剩 ESC/点击退菜单
 - [MVP-5] Building.hp 默认值用 BUILDING_STATS.hp 字段,legacy test(直接 Building(...))也兼容 —— __post_init__ 里 hp<=0 才取默认值,显式传入 hp 不会被覆盖
 - [MVP-5] HUD 用 ev.mod 而非 pygame.key.get_mods() 解析 Ctrl/Shift —— 允许测试用 pygame.event.Event(mod=...) 模拟组合键,无需真实键盘
 - [MVP-5] right-click 优先级:enemy_unit/building > attack_move(armed 时) > plain move —— 经典 RA "右键智能判断" 简化

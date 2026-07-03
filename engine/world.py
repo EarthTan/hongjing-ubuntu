@@ -30,6 +30,7 @@ from .resources import (
 from .units import remove_dead, tick_units
 from .settings import DEFAULT_WINDOW_H, DEFAULT_WINDOW_W, MAP_H, MAP_W
 from .tilemap import TileMap, generate_default_map
+from .victory import GameResult, check_victory
 
 
 # Starting credits & initial building placement for a fresh game.
@@ -59,6 +60,8 @@ class World:
     particles: list = field(default_factory=list)
     # MVP-8: AI controllers, one per non-player faction.
     ais: List[EnemyAI] = field(default_factory=list)
+    # MVP-9: current game outcome (set after each tick by check_victory).
+    game_result: GameResult = GameResult.ONGOING
 
     @classmethod
     def new_default(
@@ -175,6 +178,9 @@ class World:
             if key not in live_unit_ids and key not in live_building_ids:
                 self.flashes.pop(key, None)
         tick_particles(self.particles, dt)
+        # MVP-9: re-derive game outcome from the current building roster.
+        # Cheap (O(players * yards)) and called once per tick.
+        check_victory(self)
 
     def all_units(self):
         """Return every player's units, flattened."""
