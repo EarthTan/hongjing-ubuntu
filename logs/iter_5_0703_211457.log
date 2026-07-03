@@ -1,1 +1,23 @@
 ⚠ claude.ai connectors are disabled because ANTHROPIC_API_KEY or another auth source is set and takes precedence over your claude.ai login · Unset it to load your organization's connectors
+**MVP-5 完成总结**
+
+本轮完成了"操作控制"——红警风格 RTS 的核心交互层:
+
+- **engine/selection.py** — `SelectionState` 框选/单选/替换/累加,`resolve_click` 把鼠标点击分类成 own-unit/own-building/enemy-unit/enemy-building/empty
+- **engine/orders.py** — 4 种 `OrderKind` (MOVE/ATTACK_UNIT/ATTACK_BUILDING/ATTACK_MOVE) 挂在 `Unit.order` 上,`tick_orders` 串行于 `tick_units` 之后,实现射程内自动开火/追击/攻击移动自动接敌
+- **engine/groups.py** — 9 槽位 Ctrl+数字 编队/回忆,基于 unit_index 快照(recall 时自动 prune)
+- **ui/hud.py** — pygame 事件 → selection/orders/groups 接线 + 选框/选中标记/HUD 文本渲染
+- **engine/buildings.py** — `Building` 加 `hp` 字段,`BUILDING_STATS.hp` 可调
+- **main.py** — 接入 HUD 事件循环与渲染
+
+**自测结果**:
+- `tests/test_mvp5.py` 26 个新断言全绿
+- `pytest tests/` 109/109 全绿(含 MVP-1~5 全部回归)
+- `tests/smoke_test.py` headless 300 帧不 crash
+
+**落盘**:
+- PROGRESS.md [5/10] 打勾
+- DECISIONS.md 追加 11 条 MVP-5 决策
+- `git commit f9217cd` + `git push` 成功
+
+下一轮: **MVP-6 A* 寻路**

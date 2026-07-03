@@ -217,6 +217,26 @@ def tick_orders(
             _drive_one(tilemap, players, owner_id, u, order, dt)
 
 
+def _chase_target(
+    u: Unit,
+    col: int,
+    row: int,
+) -> None:
+    """Set a chase target on ``u`` while preserving its A* path.
+
+    If the goal changed (current vs cached target), the path is invalidated
+    so the next tick recomputes a fresh A*. Otherwise the unit just continues
+    along its existing path.
+    """
+    moved_goal = (u.target_col, u.target_row) != (col, row)
+    u.target_col = col
+    u.target_row = row
+    if u.state != UnitState.MOVING:
+        u.state = UnitState.MOVING
+    if moved_goal:
+        u.path = None
+
+
 def _drive_one(
     tilemap: TileMap,
     players: List[PlayerState],
@@ -235,14 +255,16 @@ def _drive_one(
         if tgt is None or tgt.is_dead:
             u.order = None
             u.state = UnitState.IDLE
+            u.path = None
             return
-        # Chase.
-        order_move(u, tgt.col, tgt.row)
+        # Chase (preserve path if target hasn't moved off our cached tile).
+        _chase_target(u, tgt.col, tgt.row)
         # In range? Fire.
         d = max(abs(u.col - tgt.col), abs(u.row - tgt.row))
         if d <= rng:
             # We're in range; stop chasing and fire.
             u.state = UnitState.IDLE
+            u.path = None
             from .units import take_damage
             take_damage(tgt, attack)
             # Stay put until target dies.
@@ -255,14 +277,15 @@ def _drive_one(
         if tgt is None:
             u.order = None
             u.state = UnitState.IDLE
+            u.path = None
             return
-        # Chase.
-        order_move(u, tgt.col, tgt.row)
+        _chase_target(u, tgt.col, tgt.row)
         bc = tgt.col + 1
         br = tgt.row + 1
         d = max(abs(u.col - bc), abs(u.row - br))
         if d <= rng:
             u.state = UnitState.IDLE
+            u.path = None
             tgt.hp -= attack  # buildings take damage too
             if tgt.hp <= 0:
                 tgt.hp = 0
@@ -299,16 +322,18 @@ def _drive_one(
             )
             return
         # Otherwise keep moving to the destination. Re-issue move to the
-        # original tile in case axis-stepping got us stuck somewhere odd.
-        order_move(u, order.target_col, order.target_row)
+        # original tile in case A* got us stuck somewhere odd.
+        _chase_target(u, order.target_col, order.target_row)
         # Arrived?
         if u.col == order.target_col and u.row == order.target_row:
             u.order = None
             u.state = UnitState.IDLE
+            u.path = None
         return
 
     # ----- MOVE -----------------------------------------------------------
     if order.kind == OrderKind.MOVE:
         if u.col == order.target_col and u.row == order.target_row:
             u.order = None
+            u.path = None
         return

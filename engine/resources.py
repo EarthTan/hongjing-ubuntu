@@ -24,6 +24,7 @@ from .buildings import (
     PlayerState,
     footprint_tiles,
 )
+from .pathfinding import Path, compute_path, nearest_walkable
 from .tilemap import TileMap
 
 
@@ -69,6 +70,7 @@ class Harvester:
     target_col: int = 0
     target_row: int = 0
     state_timer: float = 0.0   # accumulates time spent in MINING / UNLOADING
+    path: Optional[Path] = field(default=None)  # MVP-6 A* path to target
 
 
 # -----------------------------------------------------------------------------
@@ -207,7 +209,7 @@ def _tick_one(tilemap: TileMap, player: PlayerState, h: Harvester, dt: float) ->
         return
 
     if h.state == HarvesterState.MOVING_TO_ORE:
-        if _step_toward(h, h.target_col, h.target_row, dt):
+        if _step_toward(tilemap, h, h.target_col, h.target_row, dt):
             # Arrived at the ore tile
             if tilemap.is_ore(h.col, h.row):
                 h.state = HarvesterState.MINING
@@ -234,7 +236,7 @@ def _tick_one(tilemap: TileMap, player: PlayerState, h: Harvester, dt: float) ->
         return
 
     if h.state == HarvesterState.MOVING_TO_REFINERY:
-        if _step_toward(h, h.target_col, h.target_row, dt):
+        if _step_toward(tilemap, h, h.target_col, h.target_row, dt):
             # Adjacent enough to start unloading
             h.state = HarvesterState.UNLOADING
             h.state_timer = 0.0
@@ -254,33 +256,91 @@ def _tick_one(tilemap: TileMap, player: PlayerState, h: Harvester, dt: float) ->
 
 
 # -----------------------------------------------------------------------------
-# Movement (tile-stepping; replaced by A* in MVP-6)
+# Movement (A* path-driven; MVP-6)
 # -----------------------------------------------------------------------------
 def _head_to(h: Harvester, col: int, row: int, next_state: HarvesterState) -> None:
+    """Set a new destination and reset the A* path so the next tick recomputes.
+
+    If the destination hasn't changed and the harvester is already in a moving
+    state, we keep the existing path to avoid wasted replans.
+    """
+    moved_goal = (h.target_col, h.target_row) != (col, row)
     h.target_col = col
     h.target_row = row
     h.state = next_state
+    if moved_goal:
+        h.path = None
 
 
-def _step_toward(h: Harvester, target_c: int, target_r: int, dt: float) -> bool:
-    """Step toward the target by HARVESTER_SPEED * dt tiles. Returns True on arrival."""
-    dc = target_c - h.col
-    dr = target_r - h.row
-    if dc == 0 and dr == 0:
+def _recompute_harvester_path(
+    tilemap: TileMap,
+    h: Harvester,
+) -> bool:
+    """Recompute the A* path for ``h`` toward its current target.
+
+    If the target is unwalkable (e.g. inside a refinery footprint), fall back
+    to the nearest walkable neighbour so the harvester stops beside the
+    refinery rather than on top of it.
+    """
+    goal = (h.target_col, h.target_row)
+    if not tilemap.in_bounds(*goal) or not tilemap.is_walkable(*goal):
+        near = nearest_walkable(tilemap, goal, max_radius=3)
+        if near is None or near == (h.col, h.row):
+            return False
+        h.target_col, h.target_row = near
+        goal = near
+    path = compute_path(tilemap, (h.col, h.row), goal)
+    if path is None:
+        # Try a nearest-walkable fallback for the start tile.
+        near_goal = nearest_walkable(tilemap, goal, max_radius=3)
+        if near_goal is None or near_goal == (h.col, h.row):
+            return False
+        h.target_col, h.target_row = near_goal
+        path = compute_path(tilemap, (h.col, h.row), near_goal)
+        if path is None:
+            return False
+    h.path = path
+    return True
+
+
+def _step_toward(tilemap: TileMap, h: Harvester, target_c: int, target_r: int, dt: float) -> bool:
+    """Step toward the target by HARVESTER_SPEED * dt tiles along an A* path.
+
+    Returns True on arrival. If no path is set, we compute one; if A* fails
+    we return True to short-circuit the harvester out of the moving state
+    (the state machine will re-route via nearest_ore/refinery on the next tick).
+    """
+    if h.col == target_c and h.row == target_r:
         return True
-    # Move at most 1 tile per axis per tick to keep movement grid-aligned and snappy
+
+    if h.path is None:
+        if not _recompute_harvester_path(tilemap, h):
+            # Couldn't find a path; give up on this move (state machine
+            # will re-pick a target on the next tick).
+            return True
+
     max_step = max(1, int(HARVESTER_SPEED * dt))
-    if dc != 0:
-        step_x = max(-max_step, min(max_step, dc))
-        h.col += step_x
-    if dr != 0:
-        step_y = max(-max_step, min(max_step, dr))
-        h.row += step_y
-    # Arrived if the remaining delta is within 1 step
-    if abs(target_c - h.col) <= max_step and abs(target_r - h.row) <= max_step:
-        h.col = target_c
-        h.row = target_r
+    moved = False
+    for _ in range(max_step):
+        if h.path is None or h.path.finished:
+            break
+        if h.col == target_c and h.row == target_r:
+            break
+        nxt = h.path.peek_next()
+        if nxt == (h.col, h.row):
+            h.path.advance()
+            if h.path.finished:
+                break
+            nxt = h.path.peek_next()
+        h.col, h.row = nxt
+        h.path.advance()
+        moved = True
+    if h.col == target_c and h.row == target_r:
+        h.path = None
         return True
+    if not moved:
+        # Path dead-ended; clear it so the next tick can replan.
+        h.path = None
     return False
 
 

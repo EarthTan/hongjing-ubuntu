@@ -4,7 +4,11 @@
 - [x] 3. 资源循环 — Harvester 状态机(IDLE→MOVING_TO_ORE→MINING→MOVING_TO_REFINERY→UNLOADING)；spiral 找最近矿点/矿场；矿场自动 spawn 矿车(1400 成本，每矿场上限 2)；卸货 700 ore=700 credits；World.tick(dt) 驱动全套循环
 - [x] 4. 单位体系 — 4 兵种(INFANTRY/ROCKET/LIGHT_TANK/HEAVY_TANK)，独立 HP/攻击/射程/速度/成本，per-tile 步进 movement(避水)，take_damage+remove_dead，spawn_unit 建筑附近出生，World.tick 整合
 - [x] 5. 操作控制 — engine/selection.py 框选/点击选择、engine/orders.py 4 种 Order(MOVE/ATTACK_UNIT/ATTACK_BUILDING/ATTACK_MOVE) + tick_orders 射程内自动开火、engine/groups.py Ctrl+数字编队、ui/hud.py 把鼠标/键盘事件接到 World+Selection+Groups，Building 引入 hp 字段
-- [ ] 6. A* 寻路
+- [x] 6. A* 寻路 — engine/pathfinding.py(A* + octile + 对角穿墙阻止 + Path 包装器 + nearest_walkable)；unit/harvester 接入路径跟随；chase 路径在目标未变时复用；blocked 集合支持活体占用；19 个新测试覆盖 water 绕路/直行/对角/角落切割/全墙死锁等
+- [ ] 7. 战斗表现
+- [ ] 8. 敌方 AI
+- [ ] 9. 胜负判定
+- [ ] 10. 主菜单
 - [ ] 7. 战斗表现
 - [ ] 8. 敌方 AI
 - [ ] 9. 胜负判定

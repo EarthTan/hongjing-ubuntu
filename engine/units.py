@@ -23,6 +23,7 @@ from .buildings import (
     PlayerState,
     footprint_tiles,
 )
+from .pathfinding import Path, compute_path, nearest_walkable
 from .tilemap import TileMap
 
 if TYPE_CHECKING:
@@ -125,6 +126,10 @@ class Unit:
     # MVP-5+: optional high-level order attached by engine.orders. None ⇒ legacy
     # MOVE/MOVING state machine; not None ⇒ tick_orders() drives the unit.
     order: Optional["Order"] = field(default=None)
+    # MVP-6: optional A* path. When set, the unit follows this list of tiles
+    # rather than doing direct axis-stepping. Recomputed when the goal changes
+    # (e.g. ATTACK_UNIT chasing a moving target).
+    path: Optional[Path] = field(default=None)
 
     @property
     def max_hp(self) -> int:
@@ -300,6 +305,34 @@ def order_move(unit: Unit, col: int, target_row: int) -> None:
     unit.target_col = col
     unit.target_row = target_row
     unit.state = UnitState.MOVING
+    # Clear any stale path; the order's author (orders.tick_orders or a manual
+    # MOVE issue) is responsible for recomputing one when needed.
+    unit.path = None
+
+
+def recompute_unit_path(
+    tilemap: TileMap,
+    unit: Unit,
+    blocked: Optional[set] = None,
+) -> bool:
+    """Recompute the A* path for ``unit`` toward its current target.
+
+    Returns True if a path was found (possibly with a fallback to the nearest
+    walkable tile near the target). False means we couldn't find any route.
+    """
+    goal = (unit.target_col, unit.target_row)
+    # Try direct goal first.
+    path = compute_path(tilemap, (unit.col, unit.row), goal, blocked=blocked)
+    if path is None:
+        # Fall back to a walkable tile near the goal so we still get close.
+        near = nearest_walkable(tilemap, goal, max_radius=4)
+        if near is None or near == (unit.col, unit.row):
+            return False
+        path = compute_path(tilemap, (unit.col, unit.row), near, blocked=blocked)
+        if path is None:
+            return False
+    unit.path = path
+    return True
 
 
 def tick_units(
@@ -309,9 +342,10 @@ def tick_units(
 ) -> None:
     """Advance every player's units by ``dt`` seconds.
 
-    Movement is grid-aligned axis stepping (replaced by A* in MVP-6). Units with
-    ``state == IDLE`` do nothing. Movement respects walkability; if the chosen
-    axis is blocked, the unit tries the other axis; if both are blocked it stalls.
+    MVP-6: each MOVING unit follows an A* path stored on ``u.path``. If the
+    path is missing, we compute one to the current target. The path is
+    invalidated when the target changes (handled by ``order_move`` and the
+    orders module, which clears the path before re-issuing).
     """
     for player in players:
         for u in ensure_units(player):
@@ -321,51 +355,52 @@ def tick_units(
 
 
 def _step_one(tilemap: TileMap, u: Unit, dt: float) -> None:
-    if u.col == u.target_col and u.row == u.target_row:
-        u.state = UnitState.IDLE
-        return
     speed = UNIT_STATS[u.kind].speed
     max_step = max(1, int(speed * dt))
-    dc = u.target_col - u.col
-    dr = u.target_row - u.row
 
-    def _can_stand(c: int, r: int) -> bool:
-        fw, fh = u.footprint()
-        for dy in range(fh):
-            for dx in range(fw):
-                if not tilemap.is_walkable(c + dx, r + dy):
-                    return False
-        return True
+    # Ensure we have a path. If the unit is already on its target, idle.
+    if u.col == u.target_col and u.row == u.target_row:
+        u.state = UnitState.IDLE
+        u.path = None
+        return
 
-    # Step one tile at a time along the axis so we never "teleport" past walls.
+    if u.path is None:
+        if not recompute_unit_path(tilemap, u):
+            # No path possible: idle out and let the user re-issue.
+            u.state = UnitState.IDLE
+            return
+
     moved = False
     for _ in range(max_step):
+        if u.path is None or u.path.finished:
+            break
         if u.col == u.target_col and u.row == u.target_row:
             break
-        advanced = False
-        if dc != 0:
-            step_x = 1 if dc > 0 else -1
-            nx, ny = u.col + step_x, u.row
-            if _can_stand(nx, ny):
-                u.col, u.row = nx, ny
-                dc = u.target_col - u.col
-                advanced = True
-        if not advanced and dr != 0:
-            step_y = 1 if dr > 0 else -1
-            nx, ny = u.col, u.row + step_y
-            if _can_stand(nx, ny):
-                u.col, u.row = nx, ny
-                dr = u.target_row - u.row
-                advanced = True
-        if not advanced:
-            # Stuck: cancel the move, idle so the player can re-issue.
-            u.state = UnitState.IDLE
-            moved = False
-            break
+        nxt = u.path.peek_next()
+        if nxt == (u.col, u.row):
+            # Path head is where we already are; advance.
+            u.path.advance()
+            if u.path.finished:
+                break
+            nxt = u.path.peek_next()
+        # Validate the next step is still walkable (defensive: terrain could
+        # have changed since we computed the path).
+        if not tilemap.is_walkable(*nxt):
+            # Replan.
+            if not recompute_unit_path(tilemap, u):
+                u.state = UnitState.IDLE
+                return
+            if u.path is None or u.path.finished:
+                break
+            nxt = u.path.peek_next()
+        u.col, u.row = nxt
+        u.path.advance()
         moved = True
 
     if u.col == u.target_col and u.row == u.target_row:
         u.state = UnitState.IDLE
+        u.path = None
         return
     if not moved and u.state == UnitState.MOVING:
         u.state = UnitState.IDLE
+        u.path = None

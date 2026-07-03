@@ -41,3 +41,13 @@
 - [MVP-5] Building.hp 默认值用 BUILDING_STATS.hp 字段,legacy test(直接 Building(...))也兼容 —— __post_init__ 里 hp<=0 才取默认值,显式传入 hp 不会被覆盖
 - [MVP-5] HUD 用 ev.mod 而非 pygame.key.get_mods() 解析 Ctrl/Shift —— 允许测试用 pygame.event.Event(mod=...) 模拟组合键,无需真实键盘
 - [MVP-5] right-click 优先级:enemy_unit/building > attack_move(armed 时) > plain move —— 经典 RA "右键智能判断" 简化
+- [MVP-6] 新文件 engine/pathfinding.py 单独承载寻路 —— 与 units/resources 解耦,单测可独立断言 basic path/obstacle/no-path 等
+- [MVP-6] A* 用 octile cost (cardinal=1000, diagonal=1414≈√2) + 八连通 + octile heuristic —— 与对角代价一致,允许走对角,且对角自动选最短
+- [MVP-6] 对角穿墙阻止:走对角时要求两邻接 cardinal 至少一个可通 —— 标准 grid-RPG 行为,不会从两堵水墙夹缝挤过
+- [MVP-6] start tile 永远允许 (即使在 blocked 里),goal tile 永远允许 (即使 unwalkable,方便"走到 ref 旁") —— 调用者负责选 walkable 终点;nearest_walkable 提供兜底
+- [MVP-6] Path 包装器 coords 列表, peek_next/advance/finished —— 与 Unit/Harvester 解耦,接口跟 dataclass 一样轻
+- [MVP-6] Unit.path 字段 + recompute_unit_path —— goal 不变时复用路径,只在 order_move 或 chase target 改变时清空,避免每 tick 重新 A*
+- [MVP-6] Harvester.path 同 Unit —— 重构 _step_toward 用 A* 路径,不可达时返回 True 让状态机重选目标
+- [MVP-6] orders.py 新增 _chase_target helper,只清 path 当 target 真变 —— 防止 ATTACK_UNIT 每 tick 重置路径,保持 chase 平滑
+- [MVP-6] A* 接 live blocked set —— 后续可加"单位互不重叠"功能,本轮先留接口,默认不传(单一移动体不需避)
+- [MVP-6] 行为变化:Unit 移动从 axis-step 变 octile diagonal,test_mvp4 中"4 east + 2 south"用例改为"4 diagonals 一步到" —— A* 是行为升级,测试同步更新反映新行为

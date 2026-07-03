@@ -239,12 +239,13 @@ def test_tick_units_moves_unit_toward_target():
     u = Unit(kind=UnitKind.LIGHT_TANK, owner_id=0, col=10, row=10, hp=120, state=UnitState.MOVING)
     u.target_col, u.target_row = 14, 12
     ensure_units(p).append(u)
-    # Light tank speed = 5 tiles/sec, 1s tick ⇒ 5 per-tile steps; 4 east + 2 south = 6 total.
+    # Light tank speed = 5 tiles/sec, 1s tick. A* (MVP-6) takes the diagonal
+    # path so 4 diagonals reach the goal in 4 steps (we have 5 max).
     tick_units(tm, [p], dt=1.0)
-    assert u.col == 14 and u.row == 11
-    # Not arrived yet — should still be MOVING.
-    assert u.state == UnitState.MOVING
-    # A second tick should finish the trip.
+    assert u.col == 14 and u.row == 12
+    # Arrived — should be IDLE.
+    assert u.state == UnitState.IDLE
+    # A second tick should remain idle.
     tick_units(tm, [p], dt=1.0)
     assert u.col == 14 and u.row == 12
     assert u.state == UnitState.IDLE
