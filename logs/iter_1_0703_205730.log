@@ -1,1 +1,18 @@
 ⚠ claude.ai connectors are disabled because ANTHROPIC_API_KEY or another auth source is set and takes precedence over your claude.ai login · Unset it to load your organization's connectors
+Push succeeded. MVP-1 is complete. Now the ralph loop will iterate to start MVP-2 next — this turn's job is done.
+
+---
+
+**MVP-1 完成摘要**
+
+- ✅ 64×64 瓦片地图（草地/水/矿），程序化生成、确定性 seed
+- ✅ 可缩放相机（0.5~2.0，滚轮触发）
+- ✅ 边缘滚动（4 边 8px 触发区，未聚焦时禁用）
+- ✅ 200×200 顶部小地图，含视口框
+- ✅ 主菜单占位（play/quit），resizable 窗口
+- ✅ 15 个 unit test 全过
+- ✅ 300 帧 headless smoke test 通过
+- ✅ Git commit + push 到 `master`
+- PROGRESS.md 第一项打勾，DECISIONS.md 记录 8 条决策
+
+下一轮将开始 MVP-2（建造系统：建造厂/电厂/矿场/兵营/战车工厂 + 电力 + 建造队列）。

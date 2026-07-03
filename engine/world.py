@@ -20,6 +20,7 @@ from .resources import (
     tick_harvesters,
     tick_refineries_spawn_harvesters,
 )
+from .units import tick_units
 from .settings import DEFAULT_WINDOW_H, DEFAULT_WINDOW_W, MAP_H, MAP_W
 from .tilemap import TileMap, generate_default_map
 
@@ -89,8 +90,18 @@ class World:
           1. Construction tick (per player, in player-id order).
           2. Refinery auto-production of harvesters (per player).
           3. Harvester state machine tick (per player).
+          4. Unit tick (per player) — MVP-4 movement.
         """
         for p in sorted(self.players, key=lambda x: x.id):
             tick_construction(self.tilemap, self.players, p.id, dt=dt)
         tick_refineries_spawn_harvesters(self.players, self.tilemap)
         tick_harvesters(self.tilemap, self.players, dt)
+        tick_units(self.tilemap, self.players, dt)
+
+    def all_units(self):
+        """Return every player's units, flattened."""
+        from .units import ensure_units
+        out = []
+        for p in self.players:
+            out.extend(ensure_units(p))
+        return out

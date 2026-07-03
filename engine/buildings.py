@@ -57,10 +57,12 @@ BUILDING_STATS: Dict[BuildingKind, BuildingStats] = {
     ),
     BuildingKind.BARRACKS: BuildingStats(
         cost=300, power_produced=0, power_consumed=20, build_time=5.0,
+        produces=("infantry", "rocket"),
     ),
     BuildingKind.WAR_FACTORY: BuildingStats(
         cost=2000, power_produced=0, power_consumed=30, build_time=10.0,
         prerequisites=(BuildingKind.REFINERY,),
+        produces=("light_tank", "heavy_tank"),
     ),
 }
 

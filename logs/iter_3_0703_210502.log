@@ -1,0 +1,14 @@
+⚠ claude.ai connectors are disabled because ANTHROPIC_API_KEY or another auth source is set and takes precedence over your claude.ai login · Unset it to load your organization's connectors
+**MVP-3 资源循环 完成 ✅**
+
+本轮成果:
+- `engine/resources.py` (新) — Harvester 5态状态机,螺旋扫描找矿/矿场,tile 步进 4 tiles/s
+- `engine/world.py` — 新增 `World.tick(dt)` 单一入口驱动 construction → spawn → harvester;`all_harvesters()` helper
+- `engine/resources.py` — Refinery 自动 spawn 矿车(1400 成本/矿场,上限 2),卸货 700 ore = 700 credits
+- `main.py` / `tests/smoke_test.py` — 接入 `world.tick(dt=1/FPS)`
+- `tests/test_mvp3.py` — 15 个新测试,覆盖 ore/refinery 查找、spawn、状态机、世界 tick 端到端
+
+验证:
+- 54/54 测试通过(MVP-1:15, MVP-2:24, MVP-3:15)
+- 300 帧 smoke test 通过(4.94s)
+- 提交 `d867851` 已 push 到 master

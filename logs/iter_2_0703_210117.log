@@ -1,0 +1,20 @@
+⚠ claude.ai connectors are disabled because ANTHROPIC_API_KEY or another auth source is set and takes precedence over your claude.ai login · Unset it to load your organization's connectors
+## 本轮收尾 (Iteration: MVP-2 完成)
+
+**目标项:** 2. 建造系统 ✅
+
+**交付:**
+- `engine/buildings.py` — 5 种建筑、Footprint/Power/Queue/Stats 表,纯逻辑零 pygame 依赖
+- `engine/world.py` — 接入 `PlayerState` 列表,默认玩家在 (5,5) 摆放建造厂
+- `tests/test_mvp2.py` — 24 个 headless 测试 (stats/power/prereq/queue/tick)
+- `PROGRESS.md` 第 2 项打勾,`DECISIONS.md` 追加 8 条 MVP-2 决策
+
+**自测:**
+- `pytest tests/` → 39 passed (15 MVP-1 + 24 MVP-2)
+- `python -m tests.smoke_test 300` → ran 300 frames in 4.95s (无 crash)
+
+**落盘:**
+- Commit `a1f7676`:`feat: [2/10] 建造系统 - 5种建筑/电力/队列/prereq`
+- Push OK,remote HEAD `a1f76768` 与本地一致
+
+下轮目标:**MVP-3 资源循环** (矿车自动采矿 → 回矿场 → 金钱增加)。

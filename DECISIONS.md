@@ -23,3 +23,11 @@
 - [MVP-3] HARVESTER_SPEED=4 tiles/s + 单轴 per-tick 步进 —— MVP-6 才换 A*，先确保步进方向正确、无穿墙
 - [MVP-3] 卸货比例 1:1(700 ore = 700 credits) —— 与经典 RA 偏离小，测试断言直观；refinery 加 buff 是 future work
 - [MVP-3] World.tick(dt) 单一入口驱动全套模拟 —— 避免上层(main/ui/AI)各自调子函数，省去顺序耦合
+- [MVP-4] 新文件 engine/units.py 单独承载单位逻辑 —— 与 buildings/resources 解耦，单测可独立断言
+- [MVP-4] 4 兵种统一 1x1 footprint —— 简化 placement/重叠/寻路测试，后续可对大单位扩 footprint
+- [MVP-4] 兵种数值按经典红警比例微调（INFANTRY 100/60hp/8dmg, ROCKET 300/50hp/25dmg 长射程, LIGHT_TANK 700/120hp/20dmg 快, HEAVY_TANK 1500/300hp/40dmg 慢）—— 经典 RA 手感，可单测断言相对关系
+- [MVP-4] BARRACKS→(INFANTRY,ROCKET), WAR_FACTORY→(LIGHT_TANK,HEAVY_TANK) 生产关系表 —— UI/MVP-5 直接查表，避免散落 if-else
+- [MVP-4] Unit 走 per-tile 轴步进(每 tick 1 tile)而不是直接 lerp 到目标 —— 与 harvester 一致，walkable 边界天然生效；MVP-6 换 A*
+- [MVP-4] take_damage 返回是否致死布尔(便于 MVP-7 命中闪烁) + 单独 remove_dead —— 关注点分离,死亡视觉表现与逻辑判定解耦
+- [MVP-4] spawn_unit 优先用 near 建筑,否则按 BUILDING_PRODUCES 自动找生产建筑,最后兜底任意建筑 —— UI/MVP-5 调不同入口
+- [MVP-4] Unit 卡住时直接 IDLE(取消移动)而不是换轴绕行 —— MVP-6 才有 A* 绕路,MVP-4 先保证不穿墙
