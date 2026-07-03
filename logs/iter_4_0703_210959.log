@@ -1,1 +1,18 @@
 ⚠ claude.ai connectors are disabled because ANTHROPIC_API_KEY or another auth source is set and takes precedence over your claude.ai login · Unset it to load your organization's connectors
+Round complete. Summary:
+
+## MVP-4 完成摘要
+
+**实现内容** (`engine/units.py`):
+- 4 个兵种：`INFANTRY` / `ROCKET` / `LIGHT_TANK` / `HEAVY_TANK`
+- 每兵种独立 `UnitStats`：cost / hp / attack / attack_range / speed / footprint
+- `BUILDING_PRODUCES` 表：兵营→{infantry, rocket}，战车工厂→{light_tank, heavy_tank}
+- `spawn_unit(player, tilemap, kind, near)`：扣费+在建筑附近找 walkable tile 出生
+- `tick_units`：per-tile 轴步进（每 tick 一格），遇水/障碍自然卡住转 IDLE
+- `take_damage` + `remove_dead`：HP≤0 标记死亡，下一帧剥离
+
+**World 集成** (`engine/world.py`): 新增 `tick_units` 步骤 + `all_units()` 查询
+
+**测试** (`tests/test_mvp4.py`): 29 个 headless 测试全部通过,覆盖 stats 表、prereq、spawn、damage、tick movement、World 集成
+
+**回归**: 83/83 测试通过(53 旧 + 29 新 + 1 smoke 300 帧),push 成功 (`c59a53c`)

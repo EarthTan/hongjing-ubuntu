@@ -15,6 +15,7 @@ from .buildings import (
     tick_construction,
 )
 from .camera import Camera
+from .orders import tick_orders
 from .resources import (
     Harvester,
     tick_harvesters,
@@ -91,12 +92,14 @@ class World:
           2. Refinery auto-production of harvesters (per player).
           3. Harvester state machine tick (per player).
           4. Unit tick (per player) — MVP-4 movement.
+          5. Order tick (per player) — MVP-5 attack/attack-move.
         """
         for p in sorted(self.players, key=lambda x: x.id):
             tick_construction(self.tilemap, self.players, p.id, dt=dt)
         tick_refineries_spawn_harvesters(self.players, self.tilemap)
         tick_harvesters(self.tilemap, self.players, dt)
         tick_units(self.tilemap, self.players, dt)
+        tick_orders(self.tilemap, self.players, dt)
 
     def all_units(self):
         """Return every player's units, flattened."""

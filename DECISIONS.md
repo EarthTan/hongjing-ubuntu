@@ -31,3 +31,13 @@
 - [MVP-4] take_damage 返回是否致死布尔(便于 MVP-7 命中闪烁) + 单独 remove_dead —— 关注点分离,死亡视觉表现与逻辑判定解耦
 - [MVP-4] spawn_unit 优先用 near 建筑,否则按 BUILDING_PRODUCES 自动找生产建筑,最后兜底任意建筑 —— UI/MVP-5 调不同入口
 - [MVP-4] Unit 卡住时直接 IDLE(取消移动)而不是换轴绕行 —— MVP-6 才有 A* 绕路,MVP-4 先保证不穿墙
+- [MVP-5] 新文件 engine/selection.py 单独承载选择状态 —— 与 orders/groups 解耦,tests 可独立断言 normalize_box/resolve_click/SelectionState
+- [MVP-5] 新文件 engine/orders.py 4 种 OrderKind + Order dataclass 挂在 Unit 上 —— OrderKind.MOVE/ATTACK_UNIT/ATTACK_BUILDING/ATTACK_MOVE,tick_orders 在 World.tick 中串行于 tick_units 之后
+- [MVP-5] 新文件 engine/groups.py 9 个槽位(1..9),按 unit_index 快照而非 id —— 单元死亡后索引会偏移,recall 时自动 prune 越界,够 MVP-5 用
+- [MVP-5] 新文件 ui/hud.py 翻译 pygame 事件为 selection/orders/groups 调用 —— 不放任何 game logic,纯事件接线 + 渲染选框/HUD 文本
+- [MVP-5] Building 加 hp 字段(默认 1000,BUILDING_STATS.hp 可调) —— MVP-7 才会画血条,但 MVP-5 的 ATTACK_BUILDING 已需要 hp 才能 kill
+- [MVP-5] ATTACK_MOVE 触发检测 enemy-in-range 自动切换 ATTACK_UNIT —— 与经典 RA 行为一致,只检测未发生接触的 tile (Chebyshev 距离 ≤ range)
+- [MVP-5] ATTACK_UNIT/ATTACK_BUILDING 射程内停下开火、不继续逼近 —— 与轴步进 movement 解耦,MVP-6 换 A* 时不会破坏战斗手感
+- [MVP-5] Building.hp 默认值用 BUILDING_STATS.hp 字段,legacy test(直接 Building(...))也兼容 —— __post_init__ 里 hp<=0 才取默认值,显式传入 hp 不会被覆盖
+- [MVP-5] HUD 用 ev.mod 而非 pygame.key.get_mods() 解析 Ctrl/Shift —— 允许测试用 pygame.event.Event(mod=...) 模拟组合键,无需真实键盘
+- [MVP-5] right-click 优先级:enemy_unit/building > attack_move(armed 时) > plain move —— 经典 RA "右键智能判断" 简化

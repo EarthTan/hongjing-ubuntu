@@ -42,27 +42,33 @@ class BuildingStats:
     build_time: float         # seconds
     produces: Tuple[str, ...] = ()  # unit kinds, used in MVP-4+
     prerequisites: Tuple[BuildingKind, ...] = ()
+    hp: int = 1000  # MVP-5+ combat HP (1000 default; can be tuned per kind)
 
 
 # Buildable kinds (Construction Yard cannot be built by a yard; we treat it as initial-only — MVP-3 will let harvesters etc. fly it out, but for MVP-2 we hard-place the yard).
 BUILDING_STATS: Dict[BuildingKind, BuildingStats] = {
     BuildingKind.CONSTRUCTION_YARD: BuildingStats(
         cost=2000, power_produced=0, power_consumed=20, build_time=0.0,
+        hp=2000,
     ),
     BuildingKind.POWER_PLANT: BuildingStats(
         cost=300, power_produced=100, power_consumed=20, build_time=5.0,
+        hp=800,
     ),
     BuildingKind.REFINERY: BuildingStats(
         cost=2000, power_produced=0, power_consumed=30, build_time=10.0,
+        hp=900,
     ),
     BuildingKind.BARRACKS: BuildingStats(
         cost=300, power_produced=0, power_consumed=20, build_time=5.0,
         produces=("infantry", "rocket"),
+        hp=800,
     ),
     BuildingKind.WAR_FACTORY: BuildingStats(
         cost=2000, power_produced=0, power_consumed=30, build_time=10.0,
         prerequisites=(BuildingKind.REFINERY,),
         produces=("light_tank", "heavy_tank"),
+        hp=1000,
     ),
 }
 
@@ -78,6 +84,12 @@ class Building:
     col: int
     row: int          # top-left tile
     owner_id: int     # 0 = player, 1 = enemy (post-MVP-8)
+    hp: int = 0       # initialized in __post_init__ to stats.hp
+
+    def __post_init__(self) -> None:
+        # Default HP comes from stats; tests can override by passing hp= explicitly.
+        if self.hp <= 0:
+            self.hp = BUILDING_STATS[self.kind].hp
 
     def footprint(self) -> Tuple[int, int, int, int]:
         """Return (col, row, w, h) tile rect."""
@@ -87,6 +99,10 @@ class Building:
     def tiles(self) -> List[Coord]:
         cs, rs, w, h = self.footprint()
         return [(cs + dc, rs + dr) for dr in range(h) for dc in range(w)]
+
+    @property
+    def is_dead(self) -> bool:
+        return self.hp <= 0
 
 
 @dataclass

@@ -14,6 +14,14 @@ from engine.settings import (
     MAX_ZOOM,
 )
 from engine.world import World
+from ui.hud import (
+    ControllerState,
+    draw_hud_text,
+    draw_selection_box,
+    draw_selection_markers,
+    handle_event,
+    new_controller,
+)
 from ui.menu import MainMenu
 
 
@@ -44,6 +52,7 @@ def run_game() -> int:
         return 0
 
     world = World.new_default()
+    ctrl: ControllerState = new_controller()
     running = True
     while running:
         for ev in pygame.event.get():
@@ -61,12 +70,23 @@ def run_game() -> int:
                 # Keep the world point under the cursor
                 wx2, wy2 = world.camera.screen_to_world(mx, my)
                 world.camera.move(wx - wx2, wy - wy2)
+            elif ev.type in (
+                pygame.MOUSEBUTTONDOWN,
+                pygame.MOUSEBUTTONUP,
+                pygame.MOUSEMOTION,
+                pygame.KEYDOWN,
+            ):
+                # MVP-5: selection, orders, control groups
+                handle_event(ev, world, ctrl)
         mx, my = pygame.mouse.get_pos()
         world.camera.update_edge_scroll(mx, my, is_window_focused=(pygame.key.get_focused() or True))
 
         screen.fill((0, 0, 0))
         draw_tilemap(screen, world.tilemap, world.camera)
         draw_minimap(screen, world.tilemap, world.camera)
+        draw_selection_box(screen, world.camera, ctrl)
+        draw_selection_markers(screen, world, ctrl)
+        draw_hud_text(screen, world, ctrl)
         world.tick(dt=1.0 / FPS)
         pygame.display.flip()
         clock.tick(FPS)

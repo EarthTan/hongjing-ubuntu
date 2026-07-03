@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from .buildings import (
     Building,
@@ -24,6 +24,9 @@ from .buildings import (
     footprint_tiles,
 )
 from .tilemap import TileMap
+
+if TYPE_CHECKING:
+    from .orders import Order  # avoid import cycle at runtime
 
 
 Coord = Tuple[int, int]
@@ -119,6 +122,9 @@ class Unit:
     state: UnitState = UnitState.IDLE
     target_col: int = 0
     target_row: int = 0
+    # MVP-5+: optional high-level order attached by engine.orders. None ⇒ legacy
+    # MOVE/MOVING state machine; not None ⇒ tick_orders() drives the unit.
+    order: Optional["Order"] = field(default=None)
 
     @property
     def max_hp(self) -> int:
