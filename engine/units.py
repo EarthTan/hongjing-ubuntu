@@ -290,6 +290,61 @@ def take_damage(unit: Unit, amount: int) -> bool:
     return False
 
 
+# -----------------------------------------------------------------------------
+# MVP-7: damage with visuals (hit flash + death particles)
+# -----------------------------------------------------------------------------
+def apply_damage_with_visuals(
+    unit: Unit,
+    amount: int,
+    flashes: dict,
+    particles: list,
+    tilemap: "TileMap | None" = None,
+    tile_size: int = 32,
+    rng=None,
+) -> bool:
+    """Apply damage to ``unit`` and emit hit-flash + (on death) explosion particles.
+
+    - On any non-fatal damage: register/refresh the flash for this unit.
+    - On death: spawn PARTICLE_COUNT_UNIT particles at the unit's tile center
+      and leave the unit at hp=0 (caller is responsible for removing it from
+      the roster via ``remove_dead``).
+    - Returns True if the unit died from this hit.
+
+    ``flashes`` maps id(unit) → HitFlashState. ``particles`` is a list of
+    Particle (mutated in place). ``tilemap`` is required only when the unit
+    actually dies (to compute the particle spawn point).
+    """
+    from .combat_visuals import (
+        HitFlashState,
+        owner_color,
+        spawn_death_particles,
+        trigger_flash,
+    )
+
+    if unit.is_dead:
+        return False
+    died = take_damage(unit, amount)
+
+    # Hit flash: register or refresh
+    key = id(unit)
+    if key not in flashes:
+        flashes[key] = HitFlashState()
+    trigger_flash(flashes[key])
+
+    if died:
+        # Spawn death particles at the unit's tile center.
+        if tilemap is not None:
+            cx = unit.col * tile_size + tile_size / 2.0
+            cy = unit.row * tile_size + tile_size / 2.0
+        else:
+            cx = float(unit.col)
+            cy = float(unit.row)
+        color = owner_color(unit.owner_id)
+        new_ps = spawn_death_particles(cx, cy, count=8, color=color, rng=rng)
+        particles.extend(new_ps)
+    return died
+
+
 def remove_dead(player: PlayerState) -> int:
     """Strip dead units from the player's roster. Returns count removed."""
     units = ensure_units(player)

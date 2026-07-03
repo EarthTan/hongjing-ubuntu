@@ -5,7 +5,15 @@ import sys
 
 import pygame
 
-from engine.render import draw_minimap, draw_tilemap, init_display
+from engine.render import (
+    draw_building_health_bars,
+    draw_hit_flash_overlay,
+    draw_minimap,
+    draw_particles,
+    draw_tilemap,
+    draw_unit_health_bars,
+    init_display,
+)
 from engine.settings import (
     DEFAULT_WINDOW_H,
     DEFAULT_WINDOW_W,
@@ -83,9 +91,23 @@ def run_game() -> int:
 
         screen.fill((0, 0, 0))
         draw_tilemap(screen, world.tilemap, world.camera)
-        draw_minimap(screen, world.tilemap, world.camera)
         draw_selection_box(screen, world.camera, ctrl)
         draw_selection_markers(screen, world, ctrl)
+        draw_unit_health_bars(
+            screen, world.camera, world.all_units(),
+            selected_ids={id(u) for u in ctrl.selection.units} if ctrl.selection.units else None,
+        )
+        draw_building_health_bars(
+            screen, world.camera, world.all_buildings(),
+            selected_ids={id(b) for b in ctrl.selection.buildings} if ctrl.selection.buildings else None,
+        )
+        draw_hit_flash_overlay(
+            screen, world.camera,
+            world.all_units(), world.all_buildings(),
+            world.flashes,
+        )
+        draw_particles(screen, world.camera, world.particles)
+        draw_minimap(screen, world.tilemap, world.camera)
         draw_hud_text(screen, world, ctrl)
         world.tick(dt=1.0 / FPS)
         pygame.display.flip()

@@ -13,7 +13,15 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 
 import pygame
 
-from engine.render import draw_minimap, draw_tilemap, init_display
+from engine.render import (
+    draw_building_health_bars,
+    draw_hit_flash_overlay,
+    draw_minimap,
+    draw_particles,
+    draw_tilemap,
+    draw_unit_health_bars,
+    init_display,
+)
 from engine.settings import DEFAULT_WINDOW_H, DEFAULT_WINDOW_W, FPS
 from engine.world import World
 
@@ -41,6 +49,15 @@ def run(frames: int = 300) -> int:
 
         screen.fill((0, 0, 0))
         draw_tilemap(screen, world.tilemap, world.camera)
+        # MVP-7: visual layers — must not crash even with empty pools.
+        draw_unit_health_bars(screen, world.camera, world.all_units())
+        draw_building_health_bars(screen, world.camera, world.all_buildings())
+        draw_hit_flash_overlay(
+            screen, world.camera,
+            world.all_units(), world.all_buildings(),
+            world.flashes,
+        )
+        draw_particles(screen, world.camera, world.particles)
         draw_minimap(screen, world.tilemap, world.camera)
         world.tick(dt=1.0 / FPS)
         pygame.display.flip()

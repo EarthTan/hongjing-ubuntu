@@ -51,3 +51,17 @@
 - [MVP-6] orders.py 新增 _chase_target helper,只清 path 当 target 真变 —— 防止 ATTACK_UNIT 每 tick 重置路径,保持 chase 平滑
 - [MVP-6] A* 接 live blocked set —— 后续可加"单位互不重叠"功能,本轮先留接口,默认不传(单一移动体不需避)
 - [MVP-6] 行为变化:Unit 移动从 axis-step 变 octile diagonal,test_mvp4 中"4 east + 2 south"用例改为"4 diagonals 一步到" —— A* 是行为升级,测试同步更新反映新行为
+- [MVP-7] 新文件 engine/combat_visuals.py 单独承载战斗表现逻辑 —— 与 units/orders/render 解耦,可独立单测 + 复用给未来特效
+- [MVP-7] HitFlashState/Particle dataclass + 0..1 intensity / 寿命字段 —— 不依赖 pygame,渲染层只读不写
+- [MVP-7] flashes 用 dict[id(entity)] 而非挂在 Unit/Building 上 —— 减少 dataclass 字段污染,死单位自动清空避免内存泄漏
+- [MVP-7] particles 用一个全局 list 而非 per-entity —— 一颗死亡爆炸是 8/16 颗粒,共用池更简单,renderer 一次性画完
+- [MVP-7] 健康条颜色阈值 0.6/0.3(绿→黄→红) + 死亡深灰 —— 经典 RTS 视觉;ratio 由 health_ratio() 一行算,renderer 不做 if-else
+- [MVP-7] damage 应用统一走 apply_damage_with_visuals(Unit) 或 inline(Building) —— take_damage 保留作 pure 逻辑函数(向后兼容 test_mvp4/5/6)
+- [MVP-7] 死亡颗粒 owner_color tinting(player 蓝/enemy 红/未知灰) —— 让玩家一眼区分谁死,小地图/HUD 也复用
+- [MVP-7] World.tick 增加 remove_dead() 调用 —— 死亡单位及时清理,flashes prune 才能识别 id 已消失
+- [MVP-7] flash prune 策略:死单位 flash 等到 intensity=0 才 pop —— 保留最后一次死亡的视觉反馈;活单位无延迟 prune
+- [MVP-7] renderer 健康条只在 damaged 或 selected 时画 —— 全血单位不画条,降低视觉噪音
+- [MVP-7] particle 渲染用 per-particle SRCALPHA Surface —— size 1~3 px 用 alpha 渐隐,避免依赖粒子着色器
+- [MVP-7] Particle 坐标用 world 像素(col*TILE_SIZE+offset),renderer 转 screen —— 与 camera/zoom 解耦
+- [MVP-7] 重命名 _drive_one 局部变量 rng → rng_atk —— 之前 rng 既是局部变量又是外部 param 名,撞 module-level rng,改名以区分
+- [MVP-7] ATTACK_MOVE 复用 rng_atk 修复合并冲突 —— 上一决策改名后,ATTACK_MOVE 分支仍引用旧名 rng 触发 NoneType <=,fix

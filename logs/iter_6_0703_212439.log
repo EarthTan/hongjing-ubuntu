@@ -1,1 +1,17 @@
 ⚠ claude.ai connectors are disabled because ANTHROPIC_API_KEY or another auth source is set and takes precedence over your claude.ai login · Unset it to load your organization's connectors
+## MVP-6 完成总结
+
+**本轮目标: A* 寻路** ✅
+
+**实现内容:**
+- `engine/pathfinding.py` — 全新 A* 模块(octile cost、八连通、对角穿墙阻止、Path 包装器、nearest_walkable 兜底)
+- `engine/units.py` — Unit 走 A* 路径,目标不变时复用 path,只在 `order_move` 或 `_chase_target` 真变时清空
+- `engine/resources.py` — Harvester 同款接入,`nearest_walkable` 兜底走到 ref 旁
+- `engine/orders.py` — 新增 `_chase_target` helper,只在 target 真正改变时清 path,避免每 tick 重算
+- `tests/test_mvp6.py` — 19 个新测试,覆盖 basic path / 绕水 / 对角 / 角落切割 / 全墙死锁 / 建筑占地绕路 / harvester 真实路径
+
+**测试结果:** 128 passed (109 旧 + 19 新),smoke 300 帧通过
+
+**commit:** `a7f9552 feat: [6/10] A* pathfinding` (已 push 到 origin/master)
+
+**PROGRESS.md:** 第 6 项已打勾,余下 7-10 待后续循环。

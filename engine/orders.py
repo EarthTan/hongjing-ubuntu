@@ -192,6 +192,9 @@ def tick_orders(
     tilemap: TileMap,
     players: List[PlayerState],
     dt: float,
+    flashes: dict | None = None,
+    particles: list | None = None,
+    rng=None,
 ) -> None:
     """Advance every unit's order.
 
@@ -203,8 +206,9 @@ def tick_orders(
       - ATTACK_MOVE: walk toward the destination; if an enemy enters range, switch
                      to attacking it (until it dies, then resume moving).
 
-    MVP-5 only handles target-tracking and damage application — visuals (health
-    bars, hit flashes, explosions) land in MVP-7.
+    MVP-5 handles target-tracking and damage application; MVP-7 adds the
+    visuals. When ``flashes`` and ``particles`` are supplied, attack hits light
+    up the target and deaths emit an explosion.
     """
     for player in players:
         owner_id = player.id
@@ -214,7 +218,10 @@ def tick_orders(
             order = getattr(u, "order", None)
             if order is None:
                 continue  # legacy: no order attached — leave the unit alone.
-            _drive_one(tilemap, players, owner_id, u, order, dt)
+            _drive_one(
+                tilemap, players, owner_id, u, order, dt,
+                flashes=flashes, particles=particles, rng=rng,
+            )
 
 
 def _chase_target(
@@ -244,8 +251,11 @@ def _drive_one(
     u: Unit,
     order: Order,
     dt: float,
+    flashes: dict | None = None,
+    particles: list | None = None,
+    rng=None,
 ) -> None:
-    rng = UNIT_STATS[u.kind].attack_range
+    rng_atk = UNIT_STATS[u.kind].attack_range
     attack = UNIT_STATS[u.kind].attack
 
     # ----- ATTACK_UNIT ----------------------------------------------------
@@ -261,12 +271,20 @@ def _drive_one(
         _chase_target(u, tgt.col, tgt.row)
         # In range? Fire.
         d = max(abs(u.col - tgt.col), abs(u.row - tgt.row))
-        if d <= rng:
+        if d <= rng_atk:
             # We're in range; stop chasing and fire.
             u.state = UnitState.IDLE
             u.path = None
-            from .units import take_damage
-            take_damage(tgt, attack)
+            from .units import apply_damage_with_visuals
+            died = apply_damage_with_visuals(
+                tgt, attack,
+                flashes=flashes if flashes is not None else {},
+                particles=particles if particles is not None else [],
+                tilemap=tilemap,
+                rng=rng,
+            )
+            if died:
+                u.order = None
             # Stay put until target dies.
             return
         return
@@ -283,16 +301,36 @@ def _drive_one(
         bc = tgt.col + 1
         br = tgt.row + 1
         d = max(abs(u.col - bc), abs(u.row - br))
-        if d <= rng:
+        if d <= rng_atk:
             u.state = UnitState.IDLE
             u.path = None
+            # Flash on building hit
+            if flashes is not None:
+                from .combat_visuals import HitFlashState, trigger_flash, owner_color, spawn_death_particles
+                key = id(tgt)
+                if key not in flashes:
+                    flashes[key] = HitFlashState()
+                trigger_flash(flashes[key])
             tgt.hp -= attack  # buildings take damage too
             if tgt.hp <= 0:
                 tgt.hp = 0
+                # Spawn building death explosion
+                if particles is not None:
+                    from .combat_visuals import owner_color, spawn_death_particles
+                    from .settings import TILE_SIZE
+                    cx = tgt.col * TILE_SIZE + TILE_SIZE
+                    cy = tgt.row * TILE_SIZE + TILE_SIZE
+                    particles.extend(
+                        spawn_death_particles(
+                            cx, cy, count=16, color=owner_color(tgt.owner_id), rng=rng,
+                        )
+                    )
                 # Remove from owner when killed.
                 owner = next(p for p in players if p.id == tgt.owner_id)
                 if tgt in owner.buildings:
                     owner.buildings.remove(tgt)
+                if flashes is not None:
+                    flashes.pop(id(tgt), None)
                 u.order = None
             return
         return
@@ -300,7 +338,7 @@ def _drive_one(
     # ----- ATTACK_MOVE ----------------------------------------------------
     if order.kind == OrderKind.ATTACK_MOVE:
         # Check for an enemy in range first.
-        eu = find_enemy_unit_in_range(players, owner_id, u.col, u.row, rng)
+        eu = find_enemy_unit_in_range(players, owner_id, u.col, u.row, rng_atk)
         if eu is not None:
             ep, eu_obj = eu
             # Convert to ATTACK_UNIT.
@@ -311,7 +349,7 @@ def _drive_one(
                 target_owner_id=ep.id,
             )
             return
-        eb = find_enemy_building_in_range(players, owner_id, u.col, u.row, rng)
+        eb = find_enemy_building_in_range(players, owner_id, u.col, u.row, rng_atk)
         if eb is not None:
             ep, eb_obj = eb
             u.order = Order(
