@@ -65,3 +65,16 @@
 - [MVP-7] Particle 坐标用 world 像素(col*TILE_SIZE+offset),renderer 转 screen —— 与 camera/zoom 解耦
 - [MVP-7] 重命名 _drive_one 局部变量 rng → rng_atk —— 之前 rng 既是局部变量又是外部 param 名,撞 module-level rng,改名以区分
 - [MVP-7] ATTACK_MOVE 复用 rng_atk 修复合并冲突 —— 上一决策改名后,ATTACK_MOVE 分支仍引用旧名 rng 触发 NoneType <=,fix
+- [MVP-8] 新文件 engine/ai.py 单独承载 AI 逻辑 —— 与 build/units/resources/orders 解耦,可独立单测,future-多 AI 也好扩展
+- [MVP-8] EnemyAI 用 dataclass 持有 player_id/time/wave_timer/cooldowns/rng/waves_sent —— 状态可序列化,测试可直接构造
+- [MVP-8] AI tick 顺序:1) _auto_expand_base 2) recruit_tick 3) _send_wave(每 120s) —— 先保证基建再产兵再进攻,与经典 RA AI 手感一致
+- [MVP-8] WAVE_INTERVAL=120s(2 分钟) —— MVP 规范明文要求;测试用 wave_timer 注入直接 fire
+- [MVP-8] 建筑优先级 POWER→REFINERY→BARRACKS→WAR_FACTORY —— 与玩家开局最佳实践一致
+- [MVP-8] BARRACKS/WAR_FACTORY gate on has_harvester —— 没有矿石收入就别建兵营,避免破产卡死
+- [MVP-8] 招聘顺序 LIGHT_TANK > INFANTRY —— 坦克单位性价比更高,优先暴兵
+- [MVP-8] ENEMY_START_CREDITS 从 5000 提升到 8000 —— yard+pp+refinery+barracks 共 4600,5000 几乎刚够,8000 留出采购矿车 1400 的预算
+- [MVP-8] POWER_PLANT carve-out:tick_construction 允许 LOW-power 时仍建造 power_plant —— 否则 fresh yard 永远卡死,AI 与玩家都救不回来
+- [MVP-8] ENEMY_START_YARD 用 (w-8, h-8) 顶左 —— 与既有常量兼容,远离玩家 (5,5) 出生点
+- [MVP-8] World.new_default 默认 with_ai=True,测试可显式 with_ai=False —— 默认开启符合"开箱即玩"语义
+- [MVP-8] _send_wave 在没有战斗单位时仍 fire(wave_timer 重置) —— 避免空 wave 阶段也卡 120s;空 base 时不 dispatch 但 timer 归零
+- [MVP-8] AI 不动玩家资源(p0 credits 不变) —— AI tick 只读/写 me.players[id],不会 cross-contaminate

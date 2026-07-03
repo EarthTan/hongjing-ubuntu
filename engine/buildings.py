@@ -304,9 +304,14 @@ def tick_construction(
     player = next(p for p in players if p.id == player_id)
     grids = recompute_power(players, ids_filter=[player_id])
     grid = grids.get(player_id, PowerGrid())
+    # Power low pauses production — except the head item is a power plant,
+    # which is the AI/human's way to escape the low-power trap. Without this
+    # carve-out, a brand-new yard can never finish its first power plant and
+    # the base is stuck forever.
     if grid.is_low() and player.queue.pending:
-        # Power low: production paused. Don't advance.
-        return None
+        head = player.queue.head()
+        if head != BuildingKind.POWER_PLANT:
+            return None
 
     head_kind = player.queue.head()
     if head_kind is None:

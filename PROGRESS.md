@@ -6,6 +6,6 @@
 - [x] 5. 操作控制 — engine/selection.py 框选/点击选择、engine/orders.py 4 种 Order(MOVE/ATTACK_UNIT/ATTACK_BUILDING/ATTACK_MOVE) + tick_orders 射程内自动开火、engine/groups.py Ctrl+数字编队、ui/hud.py 把鼠标/键盘事件接到 World+Selection+Groups，Building 引入 hp 字段
 - [x] 6. A* 寻路 — engine/pathfinding.py(A* + octile + 对角穿墙阻止 + Path 包装器 + nearest_walkable)；unit/harvester 接入路径跟随；chase 路径在目标未变时复用；blocked 集合支持活体占用；19 个新测试覆盖 water 绕路/直行/对角/角落切割/全墙死锁等
 - [x] 7. 战斗表现 — engine/combat_visuals.py (HitFlashState + Particle dataclass + health-ratio/color helpers + owner_color),engine/units.py apply_damage_with_visuals 触发 flash+spawn particles,engine/orders.py ATTACK_UNIT/ATTACK_BUILDING 触发 visuals + building 死亡 explosion,engine/world.py 持有 flashes/particles 池,tick 时 tick_flash/tick_particles + 自动 prune 死单位 flashes + 调 remove_dead,engine/render.py draw_unit_health_bars/draw_building_health_bars/draw_hit_flash_overlay/draw_particles,main.py + smoke_test 接入,tests/test_mvp7.py 31 个新测试全过
-- [ ] 8. 敌方 AI
+- [x] 8. 敌方 AI — engine/ai.py 新增 EnemyAI + tick_all_ais + ai_tick + recruit_tick + _auto_expand_base + _send_wave;World.new_default 自动 spawn 敌方 yard + EnemyAI(player_id=1),World.tick 在 construction 之后调 tick_all_ais,test_mvp8.py 24 个测试全过;POWER_PLANT carve-out 让 AI 在 LOW-power 时也能自建电厂打破僵局
 - [ ] 9. 胜负判定
 - [ ] 10. 主菜单

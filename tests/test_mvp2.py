@@ -212,12 +212,33 @@ def test_tick_low_power_pauses_construction():
     world = World.new_default(64, 64, 1024, 768, seed=1)
     p = world.get_player(0)
     p.credits = 10_000
-    enqueue(p, BuildingKind.POWER_PLANT)
+    # Use a non-power building (refinery) so we exercise the LOW-power pause
+    # path. POWER_PLANT is intentionally carved out (see
+    # test_power_plant_carve_out below) so the AI can bootstrap off a yard.
+    enqueue(p, BuildingKind.REFINERY)
     # Yard is the only structure → power is LOW → construction paused.
     for _ in range(60):
         tick_construction(tm, world.players, 0, dt=1.0)
     assert len(p.constructing) == 0, "power-low should prevent any construction site from being placed"
     assert len(p.queue) == 1, "queue should be preserved while power is low"
+
+
+def test_power_plant_carve_out_under_low_power():
+    """MVP-8: a fresh yard with a queued POWER_PLANT may still build, even
+    though the grid is LOW (yard consumes 20 with 0 produced). Without this
+    carve-out the AI/human would be stuck on a yard forever."""
+    tm = generate_default_map(64, 64, seed=1)
+    world = World.new_default(64, 64, 1024, 768, seed=1)
+    p = world.get_player(0)
+    p.credits = 10_000
+    enqueue(p, BuildingKind.POWER_PLANT)
+    target = BUILDING_STATS[BuildingKind.POWER_PLANT]
+    # With the carve-out, a site should be placed and progress each tick.
+    for _ in range(int(target.build_time) + 2):
+        tick_construction(tm, world.players, 0, dt=1.0)
+    # The power plant should now exist on the map.
+    assert any(b.kind == BuildingKind.POWER_PLANT for b in p.buildings), \
+        "POWER_PLANT should bypass the LOW-power pause"
 
 
 def test_tick_completes_building_after_build_time():

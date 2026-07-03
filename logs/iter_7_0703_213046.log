@@ -1,1 +1,15 @@
 ⚠ claude.ai connectors are disabled because ANTHROPIC_API_KEY or another auth source is set and takes precedence over your claude.ai login · Unset it to load your organization's connectors
+**Iteration 7 complete. MVP-7 (战斗表现) delivered and committed.**
+
+Summary of what landed this round:
+- `engine/combat_visuals.py`: new pure-logic module with `HitFlashState`, `Particle` dataclass, `health_ratio`/`health_color`/`owner_color` helpers, `trigger_flash`/`tick_flash`/`spawn_death_particles`/`tick_particles`
+- `engine/units.py`: `apply_damage_with_visuals` triggers hit flash + spawns death particles
+- `engine/orders.py`: `tick_orders` now routes damage through visuals (ATTACK_UNIT kills emit particles, ATTACK_BUILDING flashes and explodes)
+- `engine/world.py`: owns `flashes`/`particles` pools, auto-prunes flashes for dead/removed entities, calls `remove_dead` each tick so flash cleanup works
+- `engine/render.py`: `draw_unit_health_bars`, `draw_building_health_bars`, `draw_hit_flash_overlay`, `draw_particles`
+- `main.py` + `tests/smoke_test.py`: wired into the render pipeline (renders behind minimap, in front of selection markers)
+- `tests/test_mvp7.py`: 31 new tests covering pure logic, world-tick wiring, and renderer dummy-SDL smoke — all pass alongside the 128 existing tests
+- Smoke test still runs 300 frames cleanly (4.96s) and `python main.py` boots without errors
+- Committed (`8864dde`) and pushed to `master`
+
+Next iteration target: MVP-8 敌方 AI.

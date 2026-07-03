@@ -6,6 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List
 
+from .ai import EnemyAI, tick_all_ais
 from .buildings import (
     Building,
     BuildingKind,
@@ -33,9 +34,18 @@ from .tilemap import TileMap, generate_default_map
 
 # Starting credits & initial building placement for a fresh game.
 PLAYER_START_CREDITS = 5000
-ENEMY_START_CREDITS = 5000
+# Enemy gets a bit more so the AI can bootstrap (yard + power + refinery + barracks
+# costs 4600; 5000 is barely enough — bump to 8000 to leave headroom for harvesters).
+ENEMY_START_CREDITS = 8000
 PLAYER_START_YARD = (5, 5)
 ENEMY_START_YARD_OFFSET_FROM_END = 8  # yard top-left at (w - 8, h - 8)
+ENEMY_PLAYER_ID = 1
+DEFAULT_WITH_AI = True
+
+
+def enemy_start_yard(w_tiles: int, h_tiles: int) -> tuple[int, int]:
+    """Top-left tile for the enemy construction yard."""
+    return (w_tiles - ENEMY_START_YARD_OFFSET_FROM_END, h_tiles - ENEMY_START_YARD_OFFSET_FROM_END)
 
 
 @dataclass
@@ -47,6 +57,8 @@ class World:
     flashes: dict = field(default_factory=dict)
     # MVP-7: world-pixel particle pool (mutated in place each tick)
     particles: list = field(default_factory=list)
+    # MVP-8: AI controllers, one per non-player faction.
+    ais: List[EnemyAI] = field(default_factory=list)
 
     @classmethod
     def new_default(
@@ -56,6 +68,7 @@ class World:
         screen_w: int = DEFAULT_WINDOW_W,
         screen_h: int = DEFAULT_WINDOW_H,
         seed: int = 1,
+        with_ai: bool = DEFAULT_WITH_AI,
     ) -> "World":
         tm = generate_default_map(w_tiles, h_tiles, seed=seed)
         cam = Camera(w_tiles, h_tiles, screen_w, screen_h)
@@ -69,6 +82,17 @@ class World:
             raise RuntimeError("Default map failed to provide a buildable player yard spot")
         # The construction yard shouldn't have cost the starting credits — refund the yard baseline.
         # Cost of yard = 2000. We gave 5000, so player is left with 3000 by default; users can override.
+
+        # MVP-8: spawn the AI faction with its own starting yard and AI controller.
+        if with_ai:
+            ey, ex = enemy_start_yard(w_tiles, h_tiles)
+            p1 = PlayerState(id=ENEMY_PLAYER_ID, credits=ENEMY_START_CREDITS)
+            world.players.append(p1)
+            yard = place_building(tm, world.players, ENEMY_PLAYER_ID,
+                                  BuildingKind.CONSTRUCTION_YARD, ey, ex)
+            if yard is None:
+                raise RuntimeError("Default map failed to provide a buildable enemy yard spot")
+            world.ais.append(EnemyAI(player_id=ENEMY_PLAYER_ID))
         return world
 
     def resize(self, screen_w: int, screen_h: int) -> None:
@@ -107,6 +131,11 @@ class World:
         """
         for p in sorted(self.players, key=lambda x: x.id):
             tick_construction(self.tilemap, self.players, p.id, dt=dt)
+        # MVP-8: AI tick — runs after construction so AI enqueue + harvest
+        # happen, and before unit/order ticks so freshly-recruited units can
+        # move/fire on the same tick.
+        if self.ais:
+            tick_all_ais(self.ais, self.tilemap, self.players, dt)
         tick_refineries_spawn_harvesters(self.players, self.tilemap)
         tick_harvesters(self.tilemap, self.players, dt)
         tick_units(self.tilemap, self.players, dt)
